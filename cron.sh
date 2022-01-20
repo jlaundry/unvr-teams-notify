@@ -7,6 +7,6 @@ if [ -f "/tmp/unvr-teams-notify.lock" ]; then
     echo "Lockfile exists, bailing out"
 else
     touch /tmp/unvr-teams-notify.lock
-    python /opt/unvr-teams-notify/unvr-teams-notify.py
+    python /opt/unvr-teams-notify/events-webhook.py
     rm /tmp/unvr-teams-notify.lock
 fi
