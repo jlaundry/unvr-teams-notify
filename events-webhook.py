@@ -114,11 +114,11 @@ for camera_id in config['cameras']:
             ]
         }
 
-        # for webhook_url in config['webhooks']:
-        #     webhook_r = session.post(webhook_url, json=msg)
-        #     if webhook_r.status_code not in [200, 201]:
-        #         raise Exception(f"Failed to POST to webhook {webhook_url} {webhook_r.status_code}: {webhook_r.json()}")
+        for webhook_url in config['webhooks']:
+            webhook_r = session.post(webhook_url, json=msg)
+            if webhook_r.status_code not in [200, 201]:
+                raise Exception(f"Failed to POST to webhook {webhook_url} {webhook_r.status_code}: {webhook_r.json()}")
 
-        # LAST_TOKENS[camera_id] = event['start']
-        # with open(LAST_FILENAME, 'w') as of:
-        #     json.dump(LAST_TOKENS, of)
+        LAST_TOKENS[camera_id] = event['start']
+        with open(LAST_FILENAME, 'w') as of:
+            json.dump(LAST_TOKENS, of)
