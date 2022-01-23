@@ -77,12 +77,14 @@ for camera_id in config['cameras']:
 
         # TODO: configise
         print(f"Event at: {dt}")
-        if dt.weekday() in range(5,6):
-            # Weekend, always trigger
+        if dt.weekday() in range(5,7):
             pass
         else:
             if dt.hour in range(8,18):
-                continue
+                print("Skipping")
+                LAST_TOKENS[camera_id] = event['start']
+                with open(LAST_FILENAME, 'w') as of:
+                    json.dump(LAST_TOKENS, of)
 
         msg = {
             "type":"message",
