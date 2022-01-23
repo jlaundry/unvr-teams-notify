@@ -34,7 +34,8 @@ cat << EOF > /opt/unvr-teams-notify/config.json
     "cameras": [
         "407b264fb4c64e8234bc7c50",
         "3b9ceaecb658e8f6c3cfc581"
-    ]
+    ],
+    "timezone": "Pacific/Auckland"
 }
 EOF
 

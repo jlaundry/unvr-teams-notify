@@ -8,10 +8,14 @@ import shutil
 import tzlocal
 
 session = requests.Session()
-TIMEZONE = tzlocal.get_localzone()
 
 with open('config.json', 'r') as of:
     config = json.load(of)
+
+if 'timezone' in config.keys():
+    TIMEZONE = pytz.timezone(config['timezone'])
+else:
+    TIMEZONE = tzlocal.get_localzone()
 
 LAST_FILENAME = '.unvr-latest'
 LAST_TOKENS = {}
