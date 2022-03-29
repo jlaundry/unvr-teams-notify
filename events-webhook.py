@@ -56,24 +56,19 @@ for camera in bootstrap_r.json()['cameras']:
 
 for camera_id in config['cameras']:
 
+    start = "start"
+    if camera_id in LAST_TOKENS:
+       start += f"={LAST_TOKENS[camera_id]}"
+
     camera_name = cameras[camera_id]
-    event_r = session.get(f"https://{config['unvr']['hostname']}/proxy/protect/api/events?cameras={camera_id}&end&limit=100&orderDirection=ASC&start&types=motion&types=ring&types=smartDetectZone")
+    event_r = session.get(f"https://{config['unvr']['hostname']}/proxy/protect/api/events?cameras={camera_id}&end&limit=100&orderDirection=ASC&{start}&types=motion&types=ring&types=smartDetectZone")
 
     for event in event_r.json():
         if camera_id in LAST_TOKENS.keys() and LAST_TOKENS[camera_id] >= event['start']:
             continue
 
-        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=1080&w=1920"
-
-        with session.get(thumbnail_url, stream=True, verify=False) as thumbnail_r:
-            filename = os.path.join("thumbnails", f"{event['id']}.jpg")
-            dt = datetime.utcfromtimestamp(event['start']/1000).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
-
-            with open(filename, 'wb') as of:
-                shutil.copyfileobj(thumbnail_r.raw, of)
-
-        with open(filename, 'rb') as of:
-            img_b64 = base64.b64encode(of.read()).decode('utf-8')
+        LAST_TOKENS[camera_id] = event['start']
+        dt = datetime.utcfromtimestamp(event['start']/1000).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
 
         # TODO: configise
         print(f"Event at: {dt}")
@@ -82,9 +77,18 @@ for camera_id in config['cameras']:
         else:
             if dt.hour in range(8,18):
                 print("Skipping")
-                LAST_TOKENS[camera_id] = event['start']
-                with open(LAST_FILENAME, 'w') as of:
-                    json.dump(LAST_TOKENS, of)
+                continue
+
+        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=1080&w=1920"
+
+        with session.get(thumbnail_url, stream=True, verify=False) as thumbnail_r:
+            filename = os.path.join("thumbnails", f"{event['id']}.jpg")
+
+            with open(filename, 'wb') as of:
+                shutil.copyfileobj(thumbnail_r.raw, of)
+
+        with open(filename, 'rb') as of:
+            img_b64 = base64.b64encode(of.read()).decode('utf-8')
 
         msg = {
             "type":"message",
@@ -105,7 +109,7 @@ for camera_id in config['cameras']:
                             },
                             {
                                 "type": "TextBlock",
-                                "text": dt.strftime("%a %H:%M:%S"),
+                                "text": dt.strftime("%a, %-d %b %H:%M:%S"),
                                 "size": "Medium",
                                 "weight": "Lighter",
                                 "wrap": True,
@@ -125,6 +129,6 @@ for camera_id in config['cameras']:
             if webhook_r.status_code not in [200, 201]:
                 raise Exception(f"Failed to POST to webhook {webhook_url} {webhook_r.status_code}: {webhook_r.json()}")
 
-        LAST_TOKENS[camera_id] = event['start']
-        with open(LAST_FILENAME, 'w') as of:
-            json.dump(LAST_TOKENS, of)
+with open(LAST_FILENAME, 'w') as of:
+    json.dump(LAST_TOKENS, of)
+
