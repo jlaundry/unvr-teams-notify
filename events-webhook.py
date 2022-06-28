@@ -70,6 +70,8 @@ for camera_id in config['cameras']:
         LAST_TOKENS[camera_id] = event['start']
         dt = datetime.utcfromtimestamp(event['start']/1000).replace(tzinfo=pytz.utc).astimezone(TIMEZONE)
 
+        print(f"Event at {event['start']} weekday:{dt.weekday()} hour:{dt.hour}")
+
         # TODO: configise
         print(f"Event at: {dt}")
         if dt.weekday() in range(5,7):
@@ -79,7 +81,7 @@ for camera_id in config['cameras']:
                 print("Skipping")
                 continue
 
-        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=1080&w=1920"
+        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=350&w=350"
 
         with session.get(thumbnail_url, stream=True, verify=False) as thumbnail_r:
             filename = os.path.join("thumbnails", f"{event['id']}.jpg")
@@ -124,10 +126,14 @@ for camera_id in config['cameras']:
             ]
         }
 
+        # print(f"POSTing message")
+
         for webhook_url in config['webhooks']:
             webhook_r = session.post(webhook_url, json=msg)
+            # print(f"{webhook_url}: {json.dumps(msg)}")
             if webhook_r.status_code not in [200, 201]:
                 raise Exception(f"Failed to POST to webhook {webhook_url} {webhook_r.status_code}: {webhook_r.json()}")
+            # print(webhook_r.json())
 
 with open(LAST_FILENAME, 'w') as of:
     json.dump(LAST_TOKENS, of)
