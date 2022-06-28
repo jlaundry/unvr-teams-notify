@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 import json
 import os
@@ -6,6 +6,8 @@ import pytz
 import requests
 import shutil
 import tzlocal
+
+from azure.storage.blob import BlobServiceClient, ContentSettings, generate_blob_sas
 
 session = requests.Session()
 
@@ -16,6 +18,27 @@ if 'timezone' in config.keys():
     TIMEZONE = pytz.timezone(config['timezone'])
 else:
     TIMEZONE = tzlocal.get_localzone()
+
+
+def upload_thumbnail(filename, data):
+    blob_service_client = BlobServiceClient.from_connection_string(config['storage']['connection_string'])
+    blob_client = blob_service_client.get_blob_client(container=config['storage']['container_name'], blob=filename)
+    blob_client.upload_blob(
+        data,
+        overwrite=True,
+        content_settings=ContentSettings(content_type='image/gif'),
+    )
+
+    sas_token = generate_blob_sas(
+        config['storage']['account_name'],
+        blob_client.container_name,
+        blob_client.blob_name,
+        account_key=config['storage']['account_key'],
+        expiry = datetime.now() + timedelta(days=14),
+        permission="r",
+    )
+
+    return blob_client.url + '?' + sas_token
 
 LAST_FILENAME = '.unvr-latest'
 LAST_TOKENS = {}
@@ -81,16 +104,18 @@ for camera_id in config['cameras']:
                 print("Skipping")
                 continue
 
-        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=350&w=350"
+        #thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=350&w=350"
+        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/animated-thumbnail?h=480&keyFrameOnly=true&speedup=10&w=832"
 
         with session.get(thumbnail_url, stream=True, verify=False) as thumbnail_r:
-            filename = os.path.join("thumbnails", f"{event['id']}.jpg")
+            #filename = os.path.join("thumbnails", f"{event['id']}.gif")
+            #with open(filename, 'wb') as of:
+            #    shutil.copyfileobj(thumbnail_r.raw, of)
+            img_url = upload_thumbnail(f"{event['id']}.gif", thumbnail_r)
+            print(img_url)
 
-            with open(filename, 'wb') as of:
-                shutil.copyfileobj(thumbnail_r.raw, of)
-
-        with open(filename, 'rb') as of:
-            img_b64 = base64.b64encode(of.read()).decode('utf-8')
+        #with open(filename, 'rb') as of:
+        #    img_b64 = base64.b64encode(of.read()).decode('utf-8')
 
         msg = {
             "type":"message",
@@ -118,7 +143,7 @@ for camera_id in config['cameras']:
                             },
                             {
                                 "type": "Image",
-                                "url": f"data:image/jpeg;base64,{img_b64}",
+                                "url": img_url,  # f"data:image/gif;base64,{img_b64}",
                             },
                         ]
                     }
@@ -126,7 +151,7 @@ for camera_id in config['cameras']:
             ]
         }
 
-        # print(f"POSTing message")
+        print(f"POSTing message")
 
         for webhook_url in config['webhooks']:
             webhook_r = session.post(webhook_url, json=msg)
