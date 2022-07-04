@@ -104,18 +104,20 @@ for camera_id in config['cameras']:
                 print("Skipping")
                 continue
 
-        #thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=350&w=350"
-        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/animated-thumbnail?h=480&keyFrameOnly=true&speedup=10&w=832"
+        thumbnail_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/thumbnail?h=350&w=350"
+        gif_url = f"https://{config['unvr']['hostname']}/proxy/protect/api/events/{event['id']}/animated-thumbnail?h=480&keyFrameOnly=true&speedup=10&w=832"
 
         with session.get(thumbnail_url, stream=True, verify=False) as thumbnail_r:
-            #filename = os.path.join("thumbnails", f"{event['id']}.gif")
-            #with open(filename, 'wb') as of:
-            #    shutil.copyfileobj(thumbnail_r.raw, of)
-            img_url = upload_thumbnail(f"{event['id']}.gif", thumbnail_r)
-            print(img_url)
+            filename = os.path.join("thumbnails", f"{event['id']}.jpg")
+            with open(filename, 'wb') as of:
+                shutil.copyfileobj(thumbnail_r.raw, of)
 
-        #with open(filename, 'rb') as of:
-        #    img_b64 = base64.b64encode(of.read()).decode('utf-8')
+        with open(filename, 'rb') as of:
+            img_b64 = base64.b64encode(of.read()).decode('utf-8')
+
+        with session.get(gif_url, stream=True, verify=False) as gif_r:
+            gif_url = upload_thumbnail(f"{event['id']}.gif", gif_r)
+            print(gif_url)
 
         msg = {
             "type":"message",
@@ -143,7 +145,11 @@ for camera_id in config['cameras']:
                             },
                             {
                                 "type": "Image",
-                                "url": img_url,  # f"data:image/gif;base64,{img_b64}",
+                                "url": f"data:image/gif;base64,{img_b64}",
+                            },
+                            {
+                                "type": "TextBlock",
+                                "text": f"[View GIF]({gif_url})",
                             },
                         ]
                     }
