@@ -4,7 +4,7 @@ backports.zoneinfo==0.2.1
 certifi==2021.10.8
 cffi==1.15.0
 charset-normalizer==2.0.10
-cryptography==37.0.2
+cryptography==41.0.0
 idna==3.3
 isodate==0.6.1
 msrest==0.7.1
